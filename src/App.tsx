@@ -1,8 +1,149 @@
-import React from 'react';
-import { Dashboard } from './components/Dashboard';
+import React, { useState, useEffect } from "react";
+import Login from "./components/Login";
+import ChangePassword from "./components/ChangePassword";
+import { Dashboard } from "./components/Dashboard";
 
-function App() {
-  return <Dashboard />;
+export default function App() {
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    checkCurrentSession();
+  }, []);
+
+  const checkCurrentSession = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const storedAuthUser = localStorage.getItem("authUser");
+      const storedUserProfile = localStorage.getItem("userProfile");
+
+      if (token && storedAuthUser && storedUserProfile) {
+        // Restaurar desde localStorage
+        const parsedProfile = JSON.parse(storedUserProfile);
+        console.log("🟣 Restaurando desde localStorage:", parsedProfile);
+
+        setAuthUser(JSON.parse(storedAuthUser));
+        setUserProfile(parsedProfile);
+        setIsLoggedIn(true);
+        setNeedsPasswordChange(parsedProfile.is_first_login || false);
+      }
+
+      if (token) {
+        const response = await fetch("http://localhost:3000/auth/session", {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("🟣 checkCurrentSession → data:", data);
+
+          setAuthUser(data.authUser);
+          setUserProfile(data.userProfile);
+          setIsLoggedIn(true);
+          setNeedsPasswordChange(data.userProfile?.is_first_login || false);
+
+          localStorage.setItem("authUser", JSON.stringify(data.authUser));
+          localStorage.setItem("userProfile", JSON.stringify(data.userProfile));
+        } else {
+          setError("No se pudo verificar la sesión.");
+        }
+      }
+    } catch (error) {
+      console.error("Error checking session:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (loginData: { authUser: any; userProfile: any; session: any }) => {
+    console.log("🟣 handleLogin → loginData recibido:", loginData);
+    try {
+      if (loginData.userProfile) {
+        // Guardamos token y perfiles
+        localStorage.setItem("authToken", loginData.session.token);
+        localStorage.setItem("authUser", JSON.stringify(loginData.authUser));
+        localStorage.setItem("userProfile", JSON.stringify(loginData.userProfile));
+
+        // Actualizamos estados
+        setAuthUser(loginData.authUser);
+        setUserProfile(loginData.userProfile);
+        setIsLoggedIn(true);
+        setNeedsPasswordChange(loginData.userProfile.is_first_login);
+
+        console.log("🟣 handleLogin → userProfile guardado:", loginData.userProfile);
+      } else {
+        setError("Error: No se encontraron datos del usuario.");
+      }
+    } catch (err) {
+      setError("Error al intentar iniciar sesión");
+    }
+  };
+
+  const handlePasswordChanged = () => {
+    setNeedsPasswordChange(false);
+    if (userProfile) {
+      const updatedProfile = { ...userProfile, is_first_login: false };
+      setUserProfile(updatedProfile);
+      localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("http://localhost:3000/auth/logout", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+
+      localStorage.removeItem("authToken");
+      setAuthUser(null);
+      setUserProfile(null);
+      setIsLoggedIn(false);
+      setNeedsPasswordChange(false);
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+if (needsPasswordChange && userProfile) {
+  console.log("🟣 Redirigiendo a ChangePassword");
+  return (
+    <ChangePassword onPasswordChanged={handlePasswordChanged} />
+  );
 }
 
-export default App;
+
+  
+
+  return (
+    <Dashboard
+      userData={{
+        ...authUser,
+        ...userProfile,
+      }}
+      onLogout={handleLogout}
+    />
+  );
+}

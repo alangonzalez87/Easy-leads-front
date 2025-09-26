@@ -7,20 +7,29 @@ interface PieChartProps {
 }
 
 export const PieChart: React.FC<PieChartProps> = ({ data, size = 200 }) => {
+  // Asegurarse de que los datos no sean vacíos y calculamos el total.
   const total = data.reduce((sum, item) => sum + item.count, 0);
+
+  // Si el total es 0, no mostrar nada
+  if (total === 0) return <div>No hay datos disponibles</div>;
+
   let currentAngle = 0;
 
+  // Función para crear las rutas (segmentos) del gráfico
   const createPath = (percentage: number, startAngle: number) => {
     const angle = (percentage / 100) * 360;
     const endAngle = startAngle + angle;
     
-    const x1 = Math.cos((startAngle * Math.PI) / 180);
-    const y1 = Math.sin((startAngle * Math.PI) / 180);
-    const x2 = Math.cos((endAngle * Math.PI) / 180);
-    const y2 = Math.sin((endAngle * Math.PI) / 180);
+    // Coordenadas del círculo
+    const radius = 1; // Radio
+    const x1 = radius * Math.cos((startAngle * Math.PI) / 180);
+    const y1 = radius * Math.sin((startAngle * Math.PI) / 180);
+    const x2 = radius * Math.cos((endAngle * Math.PI) / 180);
+    const y2 = radius * Math.sin((endAngle * Math.PI) / 180);
     
     const largeArcFlag = angle > 180 ? 1 : 0;
     
+    // Creación de la ruta del gráfico (arc)
     return `M 0 0 L ${x1} ${y1} A 1 1 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
   };
 
