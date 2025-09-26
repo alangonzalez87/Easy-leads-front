@@ -34,7 +34,7 @@ export const useLeads = (userId?: number) => {
   const refreshData = async () => {
     console.log("🔄 refreshData ejecutado con userId:", userId);
     if (!userId) {
-      console.log("⛔ No hay userId, se cancela fetch");
+      
       return;
     }
 
@@ -47,10 +47,10 @@ export const useLeads = (userId?: number) => {
         .from('leads')
         .select('*')
         .eq('user_id', userId);
-        console.log("🟢 Leads crudos de Supabase:", data);
+        
 
       if (error) {
-        console.error("❌ Error recibido desde Supabase:", error);
+        
         throw error;
       }
 
@@ -72,7 +72,7 @@ export const useLeads = (userId?: number) => {
     if (userId) {
       refreshData();
     } else {
-      console.log("⛔ No hay userId en useEffect, setLoading(false)");
+      
       setLoading(false);
     }
   }, [userId]);

@@ -35,7 +35,7 @@ export const LeadsPage: React.FC = () => {
       if (!token) return;
 
       try {
-        const res = await fetch("http://localhost:3000/api/leads", {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/leads`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -90,9 +90,9 @@ const handleAddLead = async (leadData: any) => {
       return;
     }
 
-    console.log("📩 Enviando a API /api/leads:", leadData);
+    
 
-    const response = await fetch("http://localhost:3000/api/leads", {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/leads`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -102,7 +102,7 @@ const handleAddLead = async (leadData: any) => {
     });
 
     const data = await response.json();
-    console.log("📥 Respuesta API:", data);
+    
 
     if (response.ok) {
       alert("Lead agregado con éxito");
@@ -127,7 +127,7 @@ const handleAddLead = async (leadData: any) => {
     formData.append("csv", file);
 
     try {
-      const response = await fetch("http://localhost:3000/api/upload-csv", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload-csv`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -159,7 +159,7 @@ const handleAddLead = async (leadData: any) => {
 
     try {
       const token = localStorage.getItem("authToken");
-      const res = await fetch(`http://localhost:3000/api/leads/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/leads/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -288,7 +288,7 @@ const handleAddLead = async (leadData: any) => {
         onSave={async (formData) => {
           const token = localStorage.getItem("authToken");
 
-          const res = await fetch(`http://localhost:3000/api/leads/${leadToEdit.id}`, {
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/leads/${leadToEdit.id}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",

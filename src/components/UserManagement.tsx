@@ -55,7 +55,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
   // Cargar usuarios
   const loadUsers = async () => {
     try {
-      const response = await fetch("http://localhost:3000/auth/getUsers");
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/getUsers`);
       const allUsers = await response.json();
       if (response.ok) setUsers(allUsers);
       else setError(allUsers.error || "No se pudieron cargar los usuarios");
@@ -79,7 +79,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
 
     try {
       const tempPass = Math.random().toString(36).slice(-8);
-      const response = await fetch("http://localhost:3000/auth/createUser", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/create-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...newUser, tempPassword: tempPass }),
@@ -109,7 +109,7 @@ const handleDeleteUser = async (userId: number) => {
   if (!window.confirm("⚠️ ¿Seguro que querés eliminar este usuario y todo su contenido?")) return;
 
   try {
-    const res = await fetch(`http://localhost:3000/auth/deleteUser/${userId}`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}${userId}`, {
       method: "DELETE",
     });
 
@@ -132,7 +132,7 @@ const handleDeleteUser = async (userId: number) => {
   // Resetear contraseña
   const handleResetPassword = async (userId: number) => {
     try {
-      const response = await fetch("http://localhost:3000/auth/resetPassword", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/resetPassword`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),

@@ -25,7 +25,7 @@ export default function ChangePassword({ onPasswordChanged }: ChangePasswordProp
 
     const token = localStorage.getItem("authToken");
     try {
-      const response = await fetch("http://localhost:3000/api/user/change-password", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/change-password`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -49,7 +49,7 @@ export default function ChangePassword({ onPasswordChanged }: ChangePasswordProp
         alert(`❌ Error: ${data.error}`);
       }
     } catch (err) {
-      console.error("❌ Error al cambiar contraseña:", err);
+      
       alert("Error en la conexión con el servidor");
     }
   };

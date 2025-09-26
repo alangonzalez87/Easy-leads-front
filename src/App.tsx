@@ -24,7 +24,7 @@ export default function App() {
       if (token && storedAuthUser && storedUserProfile) {
         // Restaurar desde localStorage
         const parsedProfile = JSON.parse(storedUserProfile);
-        console.log("🟣 Restaurando desde localStorage:", parsedProfile);
+       
 
         setAuthUser(JSON.parse(storedAuthUser));
         setUserProfile(parsedProfile);
@@ -33,7 +33,7 @@ export default function App() {
       }
 
       if (token) {
-        const response = await fetch("http://localhost:3000/auth/session", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/session`, {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -61,7 +61,7 @@ export default function App() {
   };
 
   const handleLogin = async (loginData: { authUser: any; userProfile: any; session: any }) => {
-    console.log("🟣 handleLogin → loginData recibido:", loginData);
+    
     try {
       if (loginData.userProfile) {
         // Guardamos token y perfiles
@@ -75,7 +75,7 @@ export default function App() {
         setIsLoggedIn(true);
         setNeedsPasswordChange(loginData.userProfile.is_first_login);
 
-        console.log("🟣 handleLogin → userProfile guardado:", loginData.userProfile);
+        
       } else {
         setError("Error: No se encontraron datos del usuario.");
       }
@@ -95,7 +95,7 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:3000/auth/logout", {
+      await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -128,7 +128,7 @@ export default function App() {
   }
 
 if (needsPasswordChange && userProfile) {
-  console.log("🟣 Redirigiendo a ChangePassword");
+  
   return (
     <ChangePassword onPasswordChanged={handlePasswordChanged} />
   );
