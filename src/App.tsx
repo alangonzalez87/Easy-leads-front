@@ -133,11 +133,7 @@ if (needsPasswordChange && userProfile) {
     <ChangePassword onPasswordChanged={handlePasswordChanged} />
   );
 }
-
-
-  
-
-  return (
+ return (
     <Dashboard
       userData={{
         ...authUser,

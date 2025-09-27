@@ -125,11 +125,7 @@ const handleDeleteUser = async (userId: number) => {
     console.error("❌ Error al eliminar:", err);
   }
 };
-
-
-
-
-  // Resetear contraseña
+ // Resetear contraseña
   const handleResetPassword = async (userId: number) => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/resetPassword`, {
