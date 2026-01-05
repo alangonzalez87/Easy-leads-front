@@ -7,7 +7,7 @@ import { usePipelineLeads } from "../hooks/usePipelineLeads";
 import { ModalRenovacion } from "./ModalRenovacion";
 import { Lead, PipelineStage } from "../types";
 import { Calendar } from "lucide-react"; 
-import { pipelineStages } from "../constants/Pipeline"; 
+import { pipelineStages } from "../constants/pipeline";
 
 interface Props {
   leads: Lead[];
