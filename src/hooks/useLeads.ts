@@ -1,133 +1,122 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Lead, FilterState, DashboardStats } from '../types';
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabase";
-import { isWithinInterval, subDays, addDays } from 'date-fns';
+import { isLeadEnVentana } from "../utils/leads";
 
-const DIAS_PASADOS = 5;
-const DIAS_ADELANTE = 5;
-
-function isLeadEnVentana(fecha_finalizacion?: string | null) {
-  if (!fecha_finalizacion) return false;
-  const fecha = new Date(fecha_finalizacion);
-  const hoy = new Date();
-  const enVentana = isWithinInterval(fecha, {
-    start: subDays(hoy, DIAS_PASADOS),
-    end: addDays(hoy, DIAS_ADELANTE),
-  });
-  return enVentana;
+interface LeadStats {
+  totalLeads: number;
+  leadsActivos: number;
+  pendientes: number;
+  proximasRenovaciones: number;
+  tableros: number;
 }
 
-export const useLeads = (userId?: number) => {
-  
+const normalizeLead = (lead: any) => ({
+  ...lead,
+  fecha_finalizacion:
+    lead.fecha_finalizacion ||
+    lead.finalizaDia ||
+    lead.finaliza_dia ||
+    lead.finaliza ||
+    "",
+  pipeline_stage: lead.pipeline_stage || lead.pipeline_state || "leads",
+  tiempo: lead.tiempo ? lead.tiempo.toString() : lead.tiempo || "",
+});
 
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [filters, setFilters] = useState<FilterState>({
-    tablero: '',
-    vendedor: '',
-    estado: ''
-  });
+export const useLeads = (providedUserId?: number | null) => {
+  const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [error, setError] = useState<string>('');
- 
+  const [error, setError] = useState<string>("");
+  const [lastUpdated, setLastUpdated] = useState<string>("");
+
+  const token = localStorage.getItem("authToken");
+  let tokenUserId: number | null = null;
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      tokenUserId = payload.userId || payload.id;
+    } catch (e) {
+      console.error("useLeads - token invalido o no decodificable", e);
+    }
+  }
+
+  const userId = providedUserId ?? tokenUserId;
 
   const refreshData = async () => {
-    console.log("🔄 refreshData ejecutado con userId:", userId);
-    if (!userId) {
-      
-      return;
-    }
-
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('user_id', userId);
-        
-
-      if (error) {
-        
-        throw error;
+      let query = supabase.from("leads").select("*").order("created_at", { ascending: false });
+      if (userId) {
+        query = query.eq("user_id", userId);
       }
 
-      
-      setLeads(data as Lead[]);
-      setLastUpdated(new Date().toLocaleString('es-ES'));
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      const normalized = (data || []).map(normalizeLead);
+      setLeads(normalized);
+      setLastUpdated(new Date().toLocaleString("es-ES"));
     } catch (err) {
-      
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      console.error("useLeads - refreshData error:", err);
+      setError(err instanceof Error ? err.message : "Error desconocido");
       setLeads([]);
     } finally {
       setLoading(false);
-      
     }
   };
 
   useEffect(() => {
-    
-    if (userId) {
-      refreshData();
-    } else {
-      
-      setLoading(false);
-    }
+    refreshData();
   }, [userId]);
 
-  const filteredLeads = useMemo(() => {
-    const resultado = leads.filter(lead => {
-      if (filters.tablero && lead.tablero !== filters.tablero) return false;
-      if (filters.vendedor && lead.vendedor !== filters.vendedor) return false;
-      if (filters.estado && lead.estado !== filters.estado) return false;
-      return true;
-    });
-    
-    return resultado;
-  }, [leads, filters]);
+  const handleAddLead = async (leadData: any) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        alert("No hay token, inicia sesion de nuevo");
+        return;
+      }
 
-  const leadsActivos = useMemo(() => {
-    const activos = filteredLeads.filter(lead => lead.estado === 'activo');
-    
-    return activos;
-  }, [filteredLeads]);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/leads`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(leadData),
+      });
 
+      const data = await response.json();
 
-  const proximasRenovaciones = useMemo(() => {
-    const renovaciones = leads.filter(lead => isLeadEnVentana(lead.fecha_finalizacion));
-    
-    return renovaciones;
+      if (response.ok) {
+        alert("Lead agregado con exito");
+        setLeads((prev) => [...prev, normalizeLead(data)]);
+        setLastUpdated(new Date().toLocaleString("es-ES"));
+      } else {
+        console.error("Error desde API:", data.error);
+        alert(`Error: ${data.error}`);
+      }
+    } catch (err) {
+      console.error("Error de red o fetch:", err);
+      alert("Error al agregar el lead");
+    }
+  };
+
+  const stats: LeadStats = useMemo(() => {
+    const totalLeads = leads.length;
+    const leadsActivos = leads.filter((l) => (l.estado || "").toLowerCase() === "activo").length;
+    const pendientes = leads.filter((l) => (l.estado || "").toLowerCase() === "pendiente").length;
+    const tableros = new Set(
+      leads.map((l) => (l.tablero ?? "").toString().trim()).filter(Boolean)
+    ).size;
+    const proximasRenovaciones = leads.filter((lead) =>
+      isLeadEnVentana(lead.fecha_finalizacion, lead.pipeline_stage)
+    ).length;
+
+    return { totalLeads, leadsActivos, pendientes, proximasRenovaciones, tableros };
   }, [leads]);
 
- const stats: DashboardStats = useMemo(() => {
-  const norm = (v?: string | null) => (v ?? "").trim().toLowerCase();
-
-  const activos    = leads.filter((l) => norm(l.estado) === "activo").length;
-  const pendientes = leads.filter((l) => norm(l.estado) === "pendiente").length;
-  const inactivos  = leads.filter((l) => norm(l.estado) === "inactivo").length;
-
-  const uniqueTableros = new Set(leads.map((lead) => lead.tablero));
-
-  return {
-    totalLeads: leads.length,
-    leadsActivos: activos,
-    pendientes,                     // ahora existe explícito
-    inactivos,                      // opcional, por si querés mostrarlo
-    proximasRenovaciones: proximasRenovaciones.length,
-    tableros: uniqueTableros.size,
-  };
-}, [leads, proximasRenovaciones]);
- 
-
-  return {
-    leads,
-    proximasRenovaciones,
-    stats,
-    loading,
-    error,
-    lastUpdated,
-    refreshData,
-  };
+  return { leads, handleAddLead, loading, error, lastUpdated, refreshData, stats };
 };

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Filter, X } from 'lucide-react';
-import { Filters } from '../types';
+import { FilterState } from '../types';
 
 interface FilterBarProps {
-  filters: Filters;
-  onFilterChange: (filters: Filters) => void;
+  filters: FilterState;
+  onFilterChange: (filters: FilterState) => void;
   tableros: string[];
   vendedores: string[];
 }
@@ -88,10 +88,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">Todos los estados</option>
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
-            <option value="Pendiente">Pendiente</option>
-           
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="pausado">Pausado</option>
           </select>
         </div>
       </div>

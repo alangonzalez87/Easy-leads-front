@@ -18,10 +18,11 @@ export const AddLeadForm: React.FC<AddLeadFormProps> = ({
     tel: initialData.tel || "",
     tablero: initialData.tablero || "",
     vendedor: initialData.vendedor || "",
-    estado: initialData.estado || "activo",
+    estado: (initialData.estado || "activo"),
     tiempo: initialData.tiempo || "",
     fecha_finalizacion: initialData.fecha_finalizacion || "",
     observaciones: initialData.observaciones || "",
+    precio: 0,  // Inicialmente el precio será 0, se asignará más tarde
   });
 
   const handleChange = (field: string, value: string) => {
@@ -29,10 +30,17 @@ export const AddLeadForm: React.FC<AddLeadFormProps> = ({
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("📤 Enviando Lead:", formData); // log estratégico
-    onSave(formData);
+    e.preventDefault(); 
+    const plan = formData.tiempo;  // '30', '90', '365', o 'monthly', 'quarterly', 'annual'
+    const price = 0
+    // Agregar el precio al objeto formData
+    const leadData = { ...formData, plan };  // Añadir el campo 'precio'
+
+    console.log("📤addleadForm Enviando Lead con precio:", leadData); // Log estratégico para verificar los datos
+
+    onSave(leadData);  // Enviar los datos al contenedor (alta o actualización del lead)
   };
+
 
   return (
     <div className="w-full">

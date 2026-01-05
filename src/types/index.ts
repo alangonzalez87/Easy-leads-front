@@ -1,4 +1,4 @@
-export type PipelineStage = "por_contactar" | "contactado" | "renovo" | "inactivo";
+export type PipelineStage = "leads" | "por_contactar" | "contactado" | "renovo" | "inactivo";
 
 
 export interface Lead {
@@ -9,9 +9,11 @@ export interface Lead {
   tablero: string;
   estado: 'activo' | 'inactivo' | 'pendiente' ;
   tiempo: string; // días
-  fecha_finalizacion: string;// fecha en formato YYYY-MM-DD
+  fecha_finalizacion?: string; // fecha en formato YYYY-MM-DD
+  finalizaDia?: string; // compatibilidad con fuentes externas
   vendedor: string;
-  pipeline_state? : PipelineStage;
+  pipeline_state?: PipelineStage;
+  pipeline_stage?: PipelineStage;
   renovo_at?: string; // fecha en formato YYYY-MM-DD
 
 }

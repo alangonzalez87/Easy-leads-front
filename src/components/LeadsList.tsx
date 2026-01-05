@@ -12,6 +12,7 @@ const estadoColors = {
   activo: 'bg-green-100 text-green-800',
   inactivo: 'bg-red-100 text-red-800',
   pausado: 'bg-yellow-100 text-yellow-800',
+  pendiente: 'bg-orange-100 text-orange-800',
   completado: 'bg-blue-100 text-blue-800',
 };
 
@@ -19,7 +20,21 @@ const estadoLabels = {
   activo: 'Activo',
   inactivo: 'Inactivo',
   pausado: 'Pausado',
+  pendiente: 'Pendiente',
   completado: 'Completado',
+};
+
+const formatFechaFinal = (lead: Lead) => {
+  const rawDate = lead.fecha_finalizacion || lead.finalizaDia;
+  if (!rawDate) return 'Sin fecha';
+
+  try {
+    const parsed = parseISO(rawDate);
+    if (isNaN(parsed.getTime())) return 'Sin fecha';
+    return format(parsed, 'dd MMM yyyy', { locale: es });
+  } catch (err) {
+    return 'Sin fecha';
+  }
 };
 
 export const LeadsList: React.FC<LeadsListProps> = ({ leads }) => {
@@ -109,7 +124,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({ leads }) => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center text-sm text-gray-600">
                     <Calendar size={14} className="mr-2" />
-                    {format(parseISO(lead.finalizaDia), 'dd MMM yyyy', { locale: es })}
+                    {formatFechaFinal(lead)}
                   </div>
                 </td>
               </tr>

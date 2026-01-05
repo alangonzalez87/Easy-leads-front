@@ -7,7 +7,8 @@ import { LeadsList } from "./LeadsList";
 import { Users, Search, Plus } from "lucide-react";
 import { AddLeadModal } from "./AddLeadModal";
 import { EditLeadModal } from "./EditLeadModal";
-import { ModalRenovacion } from "./ModalRenovacion"; // 👈 import nuevo
+import { ModalRenovacion } from "./ModalRenovacion";
+import { useLeads } from "../hooks/useLeads";
 
 export const LeadsPage: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>({
@@ -24,50 +25,35 @@ export const LeadsPage: React.FC = () => {
   const [leadToEdit, setLeadToEdit] = useState<Lead | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // Renovación
   const [showRenovacionModal, setShowRenovacionModal] = useState(false);
   const [leadToRenew, setLeadToRenew] = useState<Lead | null>(null);
 
-  // 🔹 Obtener leads desde el backend
+  const { leads: leadsFromHook, handleAddLead } = useLeads();
+
   useEffect(() => {
-    const fetchLeads = async () => {
-      const token = localStorage.getItem("authToken");
-      if (!token) return;
+    setLeads(leadsFromHook);
+  }, [leadsFromHook]);
 
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/leads`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  useEffect(() => {
+    const uniqueTableros = Array.from(
+      new Set(leadsFromHook.map((lead) => (lead.tablero ?? "").toString().trim()).filter(Boolean))
+    );
+    const uniqueVendedores = Array.from(
+      new Set(
+        leadsFromHook.map((lead) => (lead.vendedor ?? "").toString().trim()).filter(Boolean)
+      )
+    );
+    setTableros(uniqueTableros);
+    setVendedores(uniqueVendedores);
+  }, [leadsFromHook]);
 
-        const data = await res.json();
-        if (res.ok) {
-          setLeads(data);
-
-          // extraer tableros y vendedores únicos
-          const uniqueTableros = Array.from(new Set(data.map((l: Lead) => l.tablero).filter(Boolean)));
-          const uniqueVendedores = Array.from(new Set(data.map((l: Lead) => l.vendedor).filter(Boolean)));
-
-          setTableros(uniqueTableros);
-          setVendedores(uniqueVendedores);
-        } else {
-          console.error("Error al obtener leads:", data.error);
-        }
-      } catch (err) {
-        console.error("❌ Error de red al obtener leads:", err);
-      }
-    };
-
-    fetchLeads();
-  }, []);
-
-  // 🔹 Filtrado de leads
   const filteredLeads = useMemo(() => {
+    const normalize = (val?: string | number | null) => (val ?? "").toString().toLowerCase().trim();
+
     return leads.filter((lead) => {
-      if (filters.tablero && lead.tablero !== filters.tablero) return false;
-      if (filters.vendedor && lead.vendedor !== filters.vendedor) return false;
-      if (filters.estado && lead.estado !== filters.estado) return false;
+      if (filters.tablero && normalize(lead.tablero) !== normalize(filters.tablero)) return false;
+      if (filters.vendedor && normalize(lead.vendedor) !== normalize(filters.vendedor)) return false;
+      if (filters.estado && normalize(lead.estado) !== normalize(filters.estado)) return false;
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
         return (
@@ -80,47 +66,6 @@ export const LeadsPage: React.FC = () => {
     });
   }, [leads, filters, searchTerm]);
 
-  // 🔹 Agregar lead individual
-// 🔹 Agregar lead individual (front)
-const handleAddLead = async (leadData: any) => {
-  try {
-    const token = localStorage.getItem("authToken"); // o de donde lo estés guardando
-    if (!token) {
-      alert("⚠️ No hay token, inicia sesión de nuevo");
-      return;
-    }
-
-    
-
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/leads`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,  // 🔑 ahora sí pasa el authMiddleware
-      },
-      body: JSON.stringify(leadData),
-    });
-
-    const data = await response.json();
-    
-
-    if (response.ok) {
-      alert("Lead agregado con éxito");
-      setShowAddLead(false);
-      setLeads((prev) => [...prev, data]);
-    } else {
-      console.error("❌ Error desde API:", data.error);
-      alert(`Error: ${data.error}`);
-    }
-  } catch (err) {
-    console.error("🚨 Error de red o fetch:", err);
-    alert("Error al agregar el lead");
-  }
-};
-
-
-
-  // 🔹 Subir CSV
   const handleUploadCSV = async (file: File) => {
     const token = localStorage.getItem("authToken");
     const formData = new FormData();
@@ -136,7 +81,7 @@ const handleAddLead = async (leadData: any) => {
       });
       const data = await response.json();
       if (response.ok) {
-        alert("Archivo CSV cargado con éxito");
+        alert("Archivo CSV cargado con exito");
         setLeads((prev) => [...prev, ...(data.newLeads || [])]);
       } else {
         alert(`Error: ${data.error}`);
@@ -146,15 +91,13 @@ const handleAddLead = async (leadData: any) => {
     }
   };
 
-  // 🔹 Editar Lead
   const handleEdit = (lead: Lead) => {
     setLeadToEdit(lead);
     setShowEditModal(true);
   };
 
-  // 🔹 Eliminar Lead
   const handleDelete = async (id: number) => {
-    const confirm = window.confirm("¿Seguro que querés eliminar este lead?");
+    const confirm = window.confirm("Seguro que queres eliminar este lead?");
     if (!confirm) return;
 
     try {
@@ -168,18 +111,17 @@ const handleAddLead = async (leadData: any) => {
 
       if (res.ok) {
         setLeads((prev) => prev.filter((l) => l.id !== id));
-        alert("✅ Lead eliminado con éxito");
+        alert("Lead eliminado con exito");
       } else {
         const data = await res.json();
-        alert(`❌ Error: ${data.error}`);
+        alert(`Error: ${data.error}`);
       }
     } catch (err) {
-      console.error("❌ Error eliminando lead:", err);
+      console.error("Error eliminando lead:", err);
       alert("Error al eliminar el lead");
     }
   };
 
-  // 🔹 Abrir modal de renovación
   const handleRenewClick = (lead: Lead) => {
     setLeadToRenew(lead);
     setShowRenovacionModal(true);
@@ -187,23 +129,19 @@ const handleAddLead = async (leadData: any) => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6 relative">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-100 rounded-lg">
             <Users size={24} className="text-blue-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Leads</h1>
-            <p className="text-sm text-gray-500">
-              {filteredLeads.length} leads encontrados
-            </p>
+            <h1 className="text-2xl font-bold text-gray-900">Gestion de Leads</h1>
+            <p className="text-sm text-gray-500">{filteredLeads.length} leads encontrados</p>
           </div>
         </div>
         <ViewToggle view={view} onViewChange={setView} />
       </div>
 
-      {/* Search Bar */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="relative">
           <Search
@@ -212,7 +150,7 @@ const handleAddLead = async (leadData: any) => {
           />
           <input
             type="text"
-            placeholder="Buscar por nombre, email o teléfono..."
+            placeholder="Buscar por nombre, email o telefono..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -228,15 +166,8 @@ const handleAddLead = async (leadData: any) => {
         </div>
       </div>
 
-      {/* Filters */}
-      <FilterBar
-        filters={filters}
-        onFilterChange={setFilters}
-        tableros={tableros}
-        vendedores={vendedores}
-      />
+      <FilterBar filters={filters} onFilterChange={setFilters} tableros={tableros} vendedores={vendedores} />
 
-      {/* Content */}
       {view === "cards" ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           {filteredLeads.length === 0 ? (
@@ -247,13 +178,13 @@ const handleAddLead = async (leadData: any) => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredLeads.map((lead, index) => (
-                <LeadCard 
-                  key={lead.email || index} 
-                  lead={lead} 
-                  context="leadsPage" 
-                  onEdit={handleEdit} 
+                <LeadCard
+                  key={lead.email || index}
+                  lead={lead}
+                  context="leadsPage"
+                  onEdit={handleEdit}
                   onDelete={handleDelete}
-                  onRenew={handleRenewClick} // 👈 pasa el handle nuevo
+                  onRenovo={handleRenewClick}
                 />
               ))}
             </div>
@@ -263,7 +194,6 @@ const handleAddLead = async (leadData: any) => {
         <LeadsList leads={filteredLeads} />
       )}
 
-      {/* Botón flotante */}
       <button
         onClick={() => setShowAddLead(true)}
         className="fixed bottom-20 right-8 bg-gradient-to-r from-green-500 to-teal-500 text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform z-50"
@@ -272,7 +202,6 @@ const handleAddLead = async (leadData: any) => {
         <Plus className="h-6 w-6" />
       </button>
 
-      {/* Modal para agregar lead */}
       <AddLeadModal
         isOpen={showAddLead}
         onClose={() => setShowAddLead(false)}
@@ -280,7 +209,6 @@ const handleAddLead = async (leadData: any) => {
         onUploadCSV={handleUploadCSV}
       />
 
-      {/* Modal para editar lead */}
       <EditLeadModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -288,7 +216,7 @@ const handleAddLead = async (leadData: any) => {
         onSave={async (formData) => {
           const token = localStorage.getItem("authToken");
 
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/leads/${leadToEdit.id}`, {
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/leads/${leadToEdit?.id}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -299,26 +227,21 @@ const handleAddLead = async (leadData: any) => {
 
           if (res.ok) {
             const updated = await res.json();
-            setLeads((prev) =>
-              prev.map((l) => (l.id === updated.id ? updated : l))
-            );
-            alert("Lead actualizado ✅");
+            setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+            alert("Lead actualizado.");
           } else {
-            alert("Error actualizando lead ❌");
+            alert("Error actualizando lead.");
           }
         }}
       />
 
-      {/* Modal para renovación */}
       {leadToRenew && (
         <ModalRenovacion
           isOpen={showRenovacionModal}
           onClose={() => setShowRenovacionModal(false)}
           lead={leadToRenew}
           onRenew={(updatedLead) => {
-            setLeads((prev) =>
-              prev.map((l) => (l.id === updatedLead.id ? updatedLead : l))
-            );
+            setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
           }}
         />
       )}

@@ -28,14 +28,15 @@ const formatDate = (date: string) => {
 };
 
 const getStatusColor = (estado: string) => {
+  const key = (estado || "").toLowerCase();
   const m: Record<string, string> = {
-    "Activo": "bg-green-100 text-green-800 border-green-200",
-    "Pendiente": "bg-orange-100 text-orange-800 border-orange-200",
-    "Finalizado": "bg-gray-100 text-gray-800 border-gray-200",
-    "Cancelado": "bg-red-100 text-red-800 border-red-200",
-    "Inactivo": "bg-rose-100 text-rose-800 border-rose-200",
+    activo: "bg-green-100 text-green-800 border-green-200",
+    pendiente: "bg-orange-100 text-orange-800 border-orange-200",
+    finalizado: "bg-gray-100 text-gray-800 border-gray-200",
+    cancelado: "bg-red-100 text-red-800 border-red-200",
+    inactivo: "bg-rose-100 text-rose-800 border-rose-200",
   };
-  return m[estado] || "bg-blue-100 text-blue-800 border-blue-200";
+  return m[key] || "bg-blue-100 text-blue-800 border-blue-200";
 };
 
 const getTableroColor = (tablero: number) => {
