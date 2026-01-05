@@ -7,7 +7,7 @@ import RenovacionesProximas from "./RenovacionesProximas";
 import { LeadsPage } from "./LeadsPage";
 import { AddLeadModal } from "./AddLeadModal";
 import ChangePassword from "./ChangePassword";
-import Sales from "./Sales";
+import Sales from "./Sales.tsx";
 import { WhatsAppChat } from "./WhatsAppChat";
 import { useLeads } from "../hooks/useLeads";
 import { isLeadEnVentana } from "../utils/leads";
