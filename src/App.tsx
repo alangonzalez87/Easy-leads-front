@@ -3,6 +3,14 @@ import Login from "./components/Login";
 import ChangePassword from "./components/ChangePassword";
 import { Dashboard } from "./components/Dashboard";
 
+const BYPASS_AUTH_FOR_LOCAL_DEV = true;
+const DEV_USER = {
+  username: "dev",
+  displayName: "Easy Leads Dev",
+  role: "super_admin" as const,
+  isFirstLogin: false,
+};
+
 export default function App() {
   const [authUser, setAuthUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -12,6 +20,15 @@ export default function App() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (BYPASS_AUTH_FOR_LOCAL_DEV) {
+      setAuthUser(DEV_USER);
+      setUserProfile(DEV_USER);
+      setIsLoggedIn(true);
+      setNeedsPasswordChange(false);
+      setLoading(false);
+      return;
+    }
+
     checkCurrentSession();
   }, []);
 
@@ -94,6 +111,14 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    if (BYPASS_AUTH_FOR_LOCAL_DEV) {
+      setAuthUser(DEV_USER);
+      setUserProfile(DEV_USER);
+      setIsLoggedIn(true);
+      setNeedsPasswordChange(false);
+      return;
+    }
+
     try {
       await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
         method: "POST",
