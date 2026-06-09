@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../services/supabase";
-import { isLeadEnVentana } from "../utils/leads";
+import { getLeadPipelineStage, isLeadEnVentana } from "../utils/leads";
 
 interface LeadStats {
   totalLeads: number;
@@ -18,7 +18,7 @@ const normalizeLead = (lead: any) => ({
     lead.finaliza_dia ||
     lead.finaliza ||
     "",
-  pipeline_stage: lead.pipeline_stage || lead.pipeline_state || "leads",
+  pipeline_stage: getLeadPipelineStage(lead),
   tiempo: lead.tiempo ? lead.tiempo.toString() : lead.tiempo || "",
 });
 

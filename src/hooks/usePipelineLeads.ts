@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Lead } from "../types";
-import { isLeadEnVentana, safeStage } from "../utils/leads";
+import { getLeadPipelineStage } from "../utils/leads";
 import { supabase } from "../services/supabase"; 
 
 export const usePipelineLeads = (leads: Lead[]) => {
@@ -16,9 +16,6 @@ export const usePipelineLeads = (leads: Lead[]) => {
 
 
   useEffect(() => {
-     const leadsEnVentana = (leads || []).filter((lead) =>
-      isLeadEnVentana(lead.fecha_finalizacion, lead.pipeline_stage)
-    );
     const grouped: Record<string, Lead[]> = {
       leads: [],
       por_contactar: [],
@@ -27,8 +24,8 @@ export const usePipelineLeads = (leads: Lead[]) => {
       inactivo: [],
     };
 
-    leadsEnVentana.forEach((lead) => {
-      const stage = safeStage(lead.pipeline_stage);
+    (leads || []).forEach((lead) => {
+      const stage = getLeadPipelineStage(lead);
       grouped[stage].push(lead);
     });
 
