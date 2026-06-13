@@ -8,10 +8,13 @@ import { LeadsPage } from "./LeadsPage";
 import { AddLeadModal } from "./AddLeadModal";
 import ChangePassword from "./ChangePassword";
 import Sales from "./Sales.tsx";
+import Comparison from "./Comparison";
+import { LeadCard } from "./LeadCard";
 import { WhatsAppChat } from "./WhatsAppChat";
 import { useLeads } from "../hooks/useLeads";
 import { isLeadEnVentana } from "../utils/leads";
-import { Loader2, Users, BarChart3, Target, Zap, Clock } from "lucide-react";
+import { Lead } from "../types";
+import { Loader2, Users, BarChart3, Target, Zap, Clock, X } from "lucide-react";
 
 interface User {
   id: number;
@@ -19,7 +22,7 @@ interface User {
   displayName: string;
   role: "super_admin" | "admin" | "user";
   isFirstLogin: boolean;
-  dashboardConfig?: any;
+  dashboardConfig?: Record<string, unknown>;
 }
 
 interface DashboardProps {
@@ -27,11 +30,12 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
-type TabId = "dashboard" | "leads" | "sales" | "renovaciones" | "users" | "configuracion";
+type TabId = "dashboard" | "leads" | "sales" | "comparison" | "renovaciones" | "users" | "configuracion";
 
 export const Dashboard: React.FC<DashboardProps> = ({ userData, onLogout }) => {
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
   const [showAddLead, setShowAddLead] = useState(false);
+  const [selectedPendingLead, setSelectedPendingLead] = useState<Lead | null>(null);
 
   const { leads, stats, loading, lastUpdated, refreshData, handleAddLead } = useLeads(
     userData?.id
@@ -45,7 +49,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userData, onLogout }) => {
 
   const proximasRenovaciones = useMemo(
     () =>
-      leads.filter((lead) => isLeadEnVentana(lead.fecha_finalizacion, lead.pipeline_stage)),
+      leads.filter((lead) => isLeadEnVentana(lead)),
     [leads]
   );
 
@@ -62,14 +66,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ userData, onLogout }) => {
     return leads
       .filter((lead) => (lead.estado || "").toLowerCase() === "activo")
       .filter((lead) => {
-        const date = normalizeDate(lead.fecha_finalizacion || (lead as any).finalizaDia);
+        const date = normalizeDate(lead.fecha_finalizacion || lead.finalizaDia);
         if (!date) return false;
         date.setHours(0, 0, 0, 0);
         return date <= today;
       })
       .sort((a, b) => {
-        const aDate = normalizeDate(a.fecha_finalizacion || (a as any).finalizaDia)?.getTime() || 0;
-        const bDate = normalizeDate(b.fecha_finalizacion || (b as any).finalizaDia)?.getTime() || 0;
+        const aDate = normalizeDate(a.fecha_finalizacion || a.finalizaDia)?.getTime() || 0;
+        const bDate = normalizeDate(b.fecha_finalizacion || b.finalizaDia)?.getTime() || 0;
         return aDate - bDate;
       });
   }, [leads]);
@@ -145,13 +149,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ userData, onLogout }) => {
                     {pendingRenewals.map((lead) => (
                       <tr
                         key={lead.id}
-                        className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300"
+                        tabIndex={0}
+                        role="button"
+                        onClick={() => setSelectedPendingLead(lead)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedPendingLead(lead);
+                          }
+                        }}
+                        className="cursor-pointer border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 focus:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400 transition-all duration-300"
+                        title="Ver datos del lead"
                       >
                         <td className="py-3 px-4 font-semibold text-gray-800">{lead.nombre || "Sin nombre"}</td>
                         <td className="py-3 px-4 text-gray-700">{lead.email || "Sin email"}</td>
                         <td className="py-3 px-4 text-gray-700">{lead.vendedor || "Sin vendedor"}</td>
                         <td className="py-3 px-4 text-gray-700">
-                          {formatDate(lead.fecha_finalizacion || (lead as any).finalizaDia)}
+                          {formatDate(lead.fecha_finalizacion || lead.finalizaDia)}
                         </td>
                         <td className="py-3 px-4 text-gray-700 capitalize">{lead.estado || "activo"}</td>
                       </tr>
@@ -166,6 +180,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ userData, onLogout }) => {
         <LeadsPage />
       ) : activeTab === "sales" ? (
         <Sales />
+      ) : activeTab === "comparison" ? (
+        <Comparison leads={leads} />
       ) : activeTab === "renovaciones" ? (
         <div className="max-w-7xl mx-auto px-6 py-8">
           <RenovacionesProximas leads={proximasRenovaciones || []} />
@@ -181,6 +197,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ userData, onLogout }) => {
 
       {/* Chat de WhatsApp */}
       <WhatsAppChat />
+
+      {selectedPendingLead && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          onClick={() => setSelectedPendingLead(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Datos del lead"
+            className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Datos del lead</h2>
+              <button
+                type="button"
+                onClick={() => setSelectedPendingLead(null)}
+                className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                title="Cerrar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <LeadCard lead={selectedPendingLead} isNearExpiry />
+          </div>
+        </div>
+      )}
 
       {/* Modal para agregar un nuevo lead */}
       <AddLeadModal

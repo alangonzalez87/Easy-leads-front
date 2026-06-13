@@ -6,7 +6,6 @@ import { LeadColumn } from "./LeadColumn";  // Aseg√∫rate de que esta importaci√
 import { usePipelineLeads } from "../hooks/usePipelineLeads";
 import { ModalRenovacion } from "./ModalRenovacion";
 import { Lead, PipelineStage } from "../types";
-import { Calendar } from "lucide-react"; 
 import { pipelineStages } from "../constants/pipeline";
 
 interface Props {
@@ -19,7 +18,7 @@ const RenovacionesProximas: React.FC<Props> = ({ leads }) => {
   const [leadToRenovar, setLeadToRenovar] = useState<Lead | null>(null);
   const [sourceCol, setSourceCol] = useState<PipelineStage | null>(null);
 
-  const { columns, updateLeadStage, moveLeadBetweenColumns, setColumns } = usePipelineLeads(leads);
+  const { columns, updateLeadStage, moveLeadBetweenColumns } = usePipelineLeads(leads);
 
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination } = result;
@@ -77,9 +76,10 @@ const RenovacionesProximas: React.FC<Props> = ({ leads }) => {
               context="renovaciones"
               onRenovo={(lead) => {
                 setLeadToRenovar(lead);
+                setSourceCol((lead.pipeline_stage || "leads") as PipelineStage);
                 setShowRenovoModal(true);
               }}
-              onInactivo={async (id) => {
+              onInactivo={async () => {
                 const updatedLead = await updateLeadStage(selectedLead!, "inactivo");
                 moveLeadBetweenColumns(selectedLead!, selectedLead!.pipeline_stage as PipelineStage, "inactivo", updatedLead as Lead);
                 setSelectedLead(null);
@@ -93,11 +93,9 @@ const RenovacionesProximas: React.FC<Props> = ({ leads }) => {
         <ModalRenovacion
           lead={leadToRenovar}
           onClose={() => {
-            if (sourceCol && leadToRenovar) {
-              moveLeadBetweenColumns(leadToRenovar, "renovo", sourceCol, leadToRenovar);
-            }
             setShowRenovoModal(false);
             setLeadToRenovar(null);
+            setSourceCol(null);
           }}
           onConfirm={async (dias) => {
             const updatedLead = await updateLeadStage(leadToRenovar, "renovo", {
@@ -105,13 +103,16 @@ const RenovacionesProximas: React.FC<Props> = ({ leads }) => {
               fecha_finalizacion: new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
             });
 
-            setColumns((prev) => ({
-              ...prev,
-              renovo: [...prev.renovo, updatedLead as Lead],
-            }));
+            moveLeadBetweenColumns(
+              leadToRenovar,
+              sourceCol || "leads",
+              "renovo",
+              updatedLead as Lead
+            );
 
             setShowRenovoModal(false);
             setLeadToRenovar(null);
+            setSourceCol(null);
           }}
         />
       )}

@@ -142,6 +142,20 @@ export const LeadCard: React.FC<LeadCardProps> = ({
           </div>
         )}
 
+        {lead.fecha_finalizacion_chatgpt && (
+          <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-2 space-y-1">
+            <div className="font-medium text-cyan-900">
+              ChatGPT finaliza: {formatDate(lead.fecha_finalizacion_chatgpt)}
+            </div>
+          </div>
+        )}
+
+        {lead.notas && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-slate-700">
+            Notas: {lead.notas}
+          </div>
+        )}
+
         {lead.vendedor && (
           <div className="flex items-center space-x-2">
             <div className="bg-yellow-100 p-2 rounded-lg">

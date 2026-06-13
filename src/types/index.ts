@@ -15,6 +15,9 @@ export interface Lead {
   pipeline_state?: PipelineStage;
   pipeline_stage?: PipelineStage;
   renovo_at?: string; // fecha en formato YYYY-MM-DD
+  fecha_inactivacion?: string;
+  fecha_finalizacion_chatgpt?: string;
+  notas?: string;
 
 }
 

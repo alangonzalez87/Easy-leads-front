@@ -20,6 +20,7 @@ const handleLogin = async (e: React.FormEvent) => {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
 
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });

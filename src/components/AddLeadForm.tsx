@@ -21,7 +21,8 @@ export const AddLeadForm: React.FC<AddLeadFormProps> = ({
     estado: (initialData.estado || "activo"),
     tiempo: initialData.tiempo || "",
     fecha_finalizacion: initialData.fecha_finalizacion || "",
-    observaciones: initialData.observaciones || "",
+    fecha_finalizacion_chatgpt: initialData.fecha_finalizacion_chatgpt || "",
+    notas: initialData.notas || "",
     precio: 0,  // Inicialmente el precio será 0, se asignará más tarde
   });
 
@@ -70,6 +71,22 @@ export const AddLeadForm: React.FC<AddLeadFormProps> = ({
                 onChange={(e) => handleChange("email", e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 placeholder="ejemplo@email.com"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha de finalización de ChatGPT
+              </label>
+              <input
+                type="date"
+                value={formData.fecha_finalizacion_chatgpt}
+                onChange={(e) =>
+                  handleChange("fecha_finalizacion_chatgpt", e.target.value)
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               />
             </div>
           </div>
@@ -172,11 +189,11 @@ export const AddLeadForm: React.FC<AddLeadFormProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Observaciones
+              Notas
             </label>
             <textarea
-              value={formData.observaciones}
-              onChange={(e) => handleChange("observaciones", e.target.value)}
+              value={formData.notas}
+              onChange={(e) => handleChange("notas", e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               placeholder="Notas adicionales..."
             />
