@@ -112,7 +112,7 @@ export const useLeads = (providedUserId?: number | null) => {
       leads.map((l) => (l.tablero ?? "").toString().trim()).filter(Boolean)
     ).size;
     const proximasRenovaciones = leads.filter((lead) =>
-      isLeadEnVentana(lead.fecha_finalizacion, lead.pipeline_stage)
+      isLeadEnVentana(lead)
     ).length;
 
     return { totalLeads, leadsActivos, pendientes, proximasRenovaciones, tableros };

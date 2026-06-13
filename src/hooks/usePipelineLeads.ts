@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
 import { Lead } from "../types";
-import { getLeadPipelineStage } from "../utils/leads";
+import {
+  getLeadPipelineStage,
+  isFinalPipelineStageVisible,
+  isLeadEnVentana,
+  markLeadPipelineStageChanged,
+  safeStage,
+} from "../utils/leads";
 import { supabase } from "../services/supabase"; 
 
 export const usePipelineLeads = (leads: Lead[]) => {
   console.log("usePipelineLeads - leads input:", leads);
-
   const [columns, setColumns] = useState<Record<string, Lead[]>>({
     leads: [],
     por_contactar: [],
@@ -26,12 +31,37 @@ export const usePipelineLeads = (leads: Lead[]) => {
 
     (leads || []).forEach((lead) => {
       const stage = getLeadPipelineStage(lead);
+      if (!isFinalPipelineStageVisible(lead)) {
+        if (stage === "renovo") {
+          grouped.leads.push({ ...lead, pipeline_stage: "leads" });
+        }
+        return;
+      }
       grouped[stage].push(lead);
     });
 
     setColumns(grouped);
     
   }, [leads]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(
+      () => setColumns((current) => {
+        const renewalsReturningToLeads = current.renovo
+          .filter((lead) => !isFinalPipelineStageVisible(lead) && isLeadEnVentana(lead))
+          .map((lead) => ({ ...lead, pipeline_stage: "leads" as const }));
+
+        return {
+          ...current,
+          leads: [...current.leads, ...renewalsReturningToLeads],
+          renovo: current.renovo.filter(isFinalPipelineStageVisible),
+          inactivo: current.inactivo.filter(isFinalPipelineStageVisible),
+        };
+      }),
+      60 * 1000
+    );
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   // Actualizar etapa de lead (y en base de datos)
   const updateLeadStage = async (
@@ -64,11 +94,13 @@ export const usePipelineLeads = (leads: Lead[]) => {
         return lead;
       }
       if (data && Array.isArray(data) && data.length > 0) {
-      return data[0];
-    } else {
+        markLeadPipelineStageChanged(lead.id, safeStage(newStage));
+        return data[0];
+      } else {
       // Si no viene, devolvé el lead local actualizado
-      return { ...lead, ...payload };
-    }
+        markLeadPipelineStageChanged(lead.id, safeStage(newStage));
+        return { ...lead, ...payload };
+      }
     } catch (err) {
       console.error("Error inesperado al actualizar lead:", err);
       return lead;

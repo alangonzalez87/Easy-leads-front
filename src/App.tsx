@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Login from "./components/Login";
 import ChangePassword from "./components/ChangePassword";
 import { Dashboard } from "./components/Dashboard";
+import {
+  clearStoredSession,
+  getStoredAccessToken,
+  getTokenRefreshDelay,
+  getValidAccessToken,
+  refreshAccessToken,
+} from "./services/auth";
 
-const BYPASS_AUTH_FOR_LOCAL_DEV = true;
+const BYPASS_AUTH_FOR_LOCAL_DEV = false;
 const DEV_USER = {
   username: "dev",
   displayName: "Easy Leads Dev",
@@ -17,7 +24,29 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+
+  const checkCurrentSession = async () => {
+    try {
+      const token = await getValidAccessToken();
+      const storedAuthUser = localStorage.getItem("authUser");
+      const storedUserProfile = localStorage.getItem("userProfile");
+
+      if (token && storedAuthUser && storedUserProfile) {
+        const parsedProfile = JSON.parse(storedUserProfile);
+        setAuthUser(JSON.parse(storedAuthUser));
+        setUserProfile(parsedProfile);
+        setIsLoggedIn(true);
+        setNeedsPasswordChange(parsedProfile.is_first_login || false);
+      } else {
+        clearStoredSession();
+      }
+    } catch (error) {
+      console.error("Error checking session:", error);
+      clearStoredSession();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (BYPASS_AUTH_FOR_LOCAL_DEV) {
@@ -32,73 +61,51 @@ export default function App() {
     checkCurrentSession();
   }, []);
 
-  const checkCurrentSession = async () => {
-    try {
-      const token = localStorage.getItem("authToken");
-      const storedAuthUser = localStorage.getItem("authUser");
-      const storedUserProfile = localStorage.getItem("userProfile");
+  useEffect(() => {
+    if (!isLoggedIn || BYPASS_AUTH_FOR_LOCAL_DEV) return;
 
-      if (token && storedAuthUser && storedUserProfile) {
-        // Restaurar desde localStorage
-        const parsedProfile = JSON.parse(storedUserProfile);
-       
+    let refreshTimer: number | undefined;
 
-        setAuthUser(JSON.parse(storedAuthUser));
-        setUserProfile(parsedProfile);
-        setIsLoggedIn(true);
-        setNeedsPasswordChange(parsedProfile.is_first_login || false);
-      }
+    const refreshWhenActive = async () => {
+      if (document.visibilityState !== "visible") return;
+      const token = await getValidAccessToken();
+      if (token) scheduleRefresh(token);
+    };
 
-      if (token) {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/session`, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log("🟣 checkCurrentSession → data:", data);
-
-          setAuthUser(data.authUser);
-          setUserProfile(data.userProfile);
-          setIsLoggedIn(true);
-          setNeedsPasswordChange(data.userProfile?.is_first_login || false);
-
-          localStorage.setItem("authUser", JSON.stringify(data.authUser));
-          localStorage.setItem("userProfile", JSON.stringify(data.userProfile));
+    const scheduleRefresh = (token: string) => {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(async () => {
+        const refreshedToken = await refreshAccessToken();
+        if (refreshedToken) {
+          scheduleRefresh(refreshedToken);
         } else {
-          setError("No se pudo verificar la sesión.");
+          refreshTimer = window.setTimeout(refreshWhenActive, 60 * 1000);
         }
-      }
-    } catch (error) {
-      console.error("Error checking session:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      }, getTokenRefreshDelay(token));
+    };
 
-  const handleLogin = async (loginData: { authUser: any; userProfile: any; session: any }) => {
-    
-    try {
-      if (loginData.userProfile) {
-        // Guardamos token y perfiles
-        localStorage.setItem("authToken", loginData.session.token);
-        localStorage.setItem("authUser", JSON.stringify(loginData.authUser));
-        localStorage.setItem("userProfile", JSON.stringify(loginData.userProfile));
+    const token = getStoredAccessToken();
+    if (token) scheduleRefresh(token);
+    window.addEventListener("focus", refreshWhenActive);
+    document.addEventListener("visibilitychange", refreshWhenActive);
 
-        // Actualizamos estados
-        setAuthUser(loginData.authUser);
-        setUserProfile(loginData.userProfile);
-        setIsLoggedIn(true);
-        setNeedsPasswordChange(loginData.userProfile.is_first_login);
+    return () => {
+      window.clearTimeout(refreshTimer);
+      window.removeEventListener("focus", refreshWhenActive);
+      document.removeEventListener("visibilitychange", refreshWhenActive);
+    };
+  }, [isLoggedIn]);
 
-        
-      } else {
-        setError("Error: No se encontraron datos del usuario.");
-      }
-    } catch (err) {
-      setError("Error al intentar iniciar sesión");
-    }
+  const handleLogin = (loginData: { authUser: any; userProfile: any; session: any }) => {
+    if (!loginData.userProfile) return;
+
+    localStorage.setItem("authToken", loginData.session.token);
+    localStorage.setItem("authUser", JSON.stringify(loginData.authUser));
+    localStorage.setItem("userProfile", JSON.stringify(loginData.userProfile));
+    setAuthUser(loginData.authUser);
+    setUserProfile(loginData.userProfile);
+    setIsLoggedIn(true);
+    setNeedsPasswordChange(loginData.userProfile.is_first_login);
   };
 
   const handlePasswordChanged = () => {
@@ -111,29 +118,24 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    if (BYPASS_AUTH_FOR_LOCAL_DEV) {
-      setAuthUser(DEV_USER);
-      setUserProfile(DEV_USER);
-      setIsLoggedIn(true);
-      setNeedsPasswordChange(false);
-      return;
-    }
+    if (BYPASS_AUTH_FOR_LOCAL_DEV) return;
 
     try {
       await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
         method: "POST",
+        credentials: "include",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
       });
-
-      localStorage.removeItem("authToken");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    } finally {
+      clearStoredSession();
       setAuthUser(null);
       setUserProfile(null);
       setIsLoggedIn(false);
       setNeedsPasswordChange(false);
-    } catch (error) {
-      console.error("Error signing out:", error);
     }
   };
 
@@ -141,29 +143,22 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4" />
           <p className="text-gray-600">Cargando...</p>
         </div>
       </div>
     );
   }
 
-  if (!isLoggedIn) {
-    return <Login onLogin={handleLogin} />;
+  if (!isLoggedIn) return <Login onLogin={handleLogin} />;
+
+  if (needsPasswordChange && userProfile) {
+    return <ChangePassword onPasswordChanged={handlePasswordChanged} />;
   }
 
-if (needsPasswordChange && userProfile) {
-  
   return (
-    <ChangePassword onPasswordChanged={handlePasswordChanged} />
-  );
-}
- return (
     <Dashboard
-      userData={{
-        ...authUser,
-        ...userProfile,
-      }}
+      userData={{ ...authUser, ...userProfile }}
       onLogout={handleLogout}
     />
   );

@@ -227,7 +227,11 @@ export const LeadsPage: React.FC = () => {
 
           if (res.ok) {
             const updated = await res.json();
-            setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+            setLeads((prev) =>
+              prev.map((lead) =>
+                lead.id === updated.id ? { ...updated, ...formData } : lead
+              )
+            );
             alert("Lead actualizado.");
           } else {
             alert("Error actualizando lead.");

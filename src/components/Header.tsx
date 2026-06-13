@@ -3,15 +3,16 @@ import React from "react";
 import { 
   BarChart3, 
   Users, 
-  TrendingUp, 
+  Bot,
   UserCog, 
   RefreshCw, 
   LogOut, 
   CalendarClock,
+  FileSearch,
   Settings
 } from "lucide-react";
 
-type TabId = "dashboard" | "leads" | "sales" | "users" | "renovaciones" | "configuracion";
+type TabId = "dashboard" | "leads" | "sales" | "comparison" | "users" | "renovaciones" | "configuracion";
 
 interface HeaderProps {
   activeTab: TabId;
@@ -35,7 +36,8 @@ const Header: React.FC<HeaderProps> = ({
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3, color: "from-blue-500 to-purple-500" },
     { id: "leads", label: "Todos los Leads", icon: Users, color: "from-green-500 to-teal-500" },
-    { id: "sales", label: "Ventas", icon: TrendingUp, color: "from-orange-500 to-red-500" },
+    { id: "sales", label: "ChatGPT", icon: Bot, color: "from-cyan-500 to-blue-600" },
+    { id: "comparison", label: "Comparación", icon: FileSearch, color: "from-violet-500 to-indigo-600" },
     { id: "users", label: "Usuarios", icon: UserCog, color: "from-purple-500 to-indigo-500" },
     { id: "renovaciones", label: "Renovaciones", icon: CalendarClock, color: "from-pink-500 to-red-500" }
   ] as const;
@@ -56,7 +58,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Tabs de navegación */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           {tabs
             .filter(tab => {
               if (tab.id === "users") {
